@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaochao</title>
+    <style>
+        body{
+            display: flex;
+            background-color: hsl(70, 8%, 15%);
+            color: hsl(54, 70%, 68%);
+            font-family: system-ui;
+            overflow: hidden;
+        }
+        #groups{
+            background-color: hsl(70, 8%, 15%);
+            height: 96vh;
+            width: 10%;
+            padding: 10px;
+            overflow-y: auto;
+        }
+        .group{
+            background-color: hsl(70, 8%, 20%);
+            padding: 5px;
+        }
+        .group:hover{
+            background-color: hsl(70, 8%, 10%);
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+        .group:active{
+            background-color: hsl(70, 8%, 40%);
+        }
+        #messages{
+            background-color: hsl(70, 8%, 30%);
+            width: 100%;
+            padding:10px;
+            overflow-y: auto;
+            height: 100vh;
+        }
+        .message{
+            padding-bottom: 15px;
+        }
+        .messagecontent{
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .inputs{
+            position: absolute; 
+            bottom: 0;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #textinput{
+            background-color: hsla(71, 8%, 40%, 0.651);
+            height: 30px;
+            width: 75%;
+            border: none;
+            color: hsl(54, 70%, 68%);
+            font-family: system-ui;
+            font-size: 20px;
+            padding: 5px;
+            font-weight:bold;
+        }
+        #textinput::placeholder{
+            color: hsl(0, 0%, 17%);
+        }
+        #textsend{
+            height: 40px;
+            width: 10%;
+            border: none;
+            background-color: hsl(32, 98%, 56%);
+            font-size: 20px;
+            font-family: system-ui;
+            font-weight: bold;
+        }
+        #textsend:hover{
+            background-color: hsl(32, 98%, 46%)
+        }
+        #textsend:active{
+            background-color: hsl(32, 98%, 66%);
+        }
+        #newgroup{
+            height: 40px;
+            width: 100%;
+            margin-bottom: 20px;
+            background-color: hsl(70, 8%, 20%);
+            border: none;
+            color: hsl(54, 70%, 68%);
+            font-family: system-ui;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        #newgroup:hover{
+            background-color: hsl(70, 8%, 10%);
+        }
+        #newgroup:active{
+            background-color: hsl(70, 8%, 40%);
+        }
+    </style>
+</head>
+<body>
+    <div id="groups">
+        <button id="newgroup" onclick="addgrp()">+ Add Group</button>
+    </div>
+    <div id="messages">
+        <div id="messageslist">
+        </div>
+        <div class="inputs">
+            <input type="text" id="textinput" placeholder="#lobby">
+            <button id="textsend" onclick="sndmsg()">Send</button>
+        </div>
+        
+    </div>
+    <script>
+        if(!localStorage.getItem('ccusername')){window.location.replace("/login.html")}
+
+        if(!localStorage.getItem("ccgroups")) localStorage.setItem("ccgroups", "lobby")
+
+        const socket = new WebSocket("wss://chaochaows.loca.lt");
+        currserver = "lobby";
+
+        function addgrp(){
+            name = prompt('Group Name');
+            if(name){
+                document.getElementById("groups").innerHTML += (`
+                    <div class="group" onclick="ingrp('${name}')">
+                        #${name}
+                    </div>
+                `);
+                localStorage.setItem("ccgroups", localStorage.getItem("ccgroups")+","+name);
+            }
+        }
+
+        function ingrp(gname){
+            document.getElementById("messageslist").innerHTML = "";
+            document.getElementById("textinput").placeholder = `#${gname}`;
+            currserver = gname;
+        }
+
+        function sndmsg(){
+            author = localStorage.getItem('ccusername');
+            const now = new Date();
+            time = now.toLocaleTimeString([], {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            content = document.getElementById("textinput").value
+            socket.send(`${author} ${currserver} ${time} ${encodeURIComponent(content)}`)
+
+            document.getElementById("textinput").value = ""
+        }
+
+        function recmsg(author, time, content){
+            document.getElementById("messageslist").innerHTML +=
+            `<div class="message">
+            <div><i>${author}</i> ${time}</div>
+            <div class="messagecontent">${content}</div>
+            </div>`
+        }
+
+        localStorage.getItem('ccgroups').split(",").forEach(grp => {
+            document.getElementById("groups").innerHTML += (`
+                <div class="group" onclick="ingrp('${grp}')">
+                    #${grp}
+                </div>
+            `);
+        });
+
+        document.addEventListener("keypress", function(event){
+            if(event.key === "Enter" || event.keyCode === 13){
+                console.log("send")
+                event.preventDefault();
+                sndmsg();
+            }
+        })
+
+        socket.addEventListener('message', (event) => {
+            msg = event.data.split(" ");
+            console.log(msg)
+            if(currserver==msg[1]){ recmsg(msg[0], msg[2], decodeURIComponent(msg[3]))};
+        })
+    </script>
+</body>
+</html>
