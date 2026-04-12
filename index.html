@@ -113,7 +113,7 @@
         
     </div>
     <script>
-        if(!localStorage.getItem('ccusername')){window.location.replace("/login.html")}
+        if(!sessionStorage.getItem('ccusername')){window.location.replace("/login.html")}
 
         if(!localStorage.getItem("ccgroups")) localStorage.setItem("ccgroups", "lobby")
 
@@ -139,7 +139,7 @@
         }
 
         function sndmsg(){
-            author = localStorage.getItem('ccusername');
+            author = sessionStorage.getItem('ccusername');
             const now = new Date();
             time = now.toLocaleTimeString([], {
                 hour12: false,
