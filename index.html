@@ -11,6 +11,17 @@
             color: hsl(54, 70%, 68%);
             font-family: system-ui;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: hsl(70, 8%, 30%); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: hsl(54, 70%, 68%); 
         }
         #groups{
             background-color: hsl(70, 8%, 15%);
@@ -33,10 +44,16 @@
         }
         #messages{
             background-color: hsl(70, 8%, 30%);
-            width: 100%;
+            width: 80%;
             padding:10px;
-            overflow-y: auto;
             height: 100vh;
+            padding-bottom: 30px;
+        }
+        #messageslist{
+            overflow-y: scroll;
+            max-height: 93%;
+            display: flex;
+            flex-direction: column-reverse;
         }
         .message{
             padding-bottom: 15px;
@@ -44,6 +61,13 @@
         .messagecontent{
             font-size: 20px;
             font-weight: bold;
+        }
+        #members{
+            background-color: hsl(70, 8%, 15%);
+            width: 10%;
+            padding:10px;
+            overflow-y: auto;
+            height: 100vh;
         }
         .inputs{
             position: absolute; 
@@ -53,8 +77,8 @@
         }
         #textinput{
             background-color: hsla(71, 8%, 40%, 0.651);
-            height: 30px;
-            width: 75%;
+            height: 10%;
+            width: 65%;
             border: none;
             color: hsl(54, 70%, 68%);
             font-family: system-ui;
@@ -66,7 +90,7 @@
             color: hsl(0, 0%, 17%);
         }
         #textsend{
-            height: 40px;
+            height: 35px;
             width: 10%;
             border: none;
             background-color: hsl(32, 98%, 56%);
@@ -80,93 +104,129 @@
         #textsend:active{
             background-color: hsl(32, 98%, 66%);
         }
-        #newgroup{
-            height: 40px;
+        #bar{
+            height: 3%;
+        }
+        #serverjointext{
+            width: 70%;
+        }
+        #serverjoinbtn{
+            width: 30%;
+        }
+        #newserver{
             width: 100%;
-            margin-bottom: 20px;
-            background-color: hsl(70, 8%, 20%);
-            border: none;
-            color: hsl(54, 70%, 68%);
-            font-family: system-ui;
-            font-weight: bold;
-            font-size: 15px;
-        }
-        #newgroup:hover{
-            background-color: hsl(70, 8%, 10%);
-        }
-        #newgroup:active{
-            background-color: hsl(70, 8%, 40%);
         }
     </style>
 </head>
 <body>
-    <div id="groups">
-        <button id="newgroup" onclick="addgrp()">+ Add Group</button>
-    </div>
-    <div id="messages">
-        <div id="messageslist">
+        <div id="groups">
+            <div>
+                <input type="search" placeholder="Servers" id="serverjointext"><button id="serverjoinbtn" onclick="joinserver()">Join</button>
+            </div>
+            
+            <button id="newserver" onclick="newserver(window.prompt('Server Name'))">
+                + Create Server
+            </button>
+            <hr>
         </div>
-        <div class="inputs">
-            <input type="text" id="textinput" placeholder="#lobby">
-            <button id="textsend" onclick="sndmsg()">Send</button>
+        <div id="messages">
+            <div id="messageslist">
+            </div>
+            <div class="inputs">
+                <input type="text" id="textinput" placeholder="#lobby">
+                <button id="textsend" onclick="sndmsg()">Send</button>
+            </div>
         </div>
-        
-    </div>
+        <div id="members">
+        </div>
     <script>
-        if(!sessionStorage.getItem('ccusername')){window.location.replace("/login.html")}
 
-        if(!localStorage.getItem("ccgroups")) localStorage.setItem("ccgroups", "lobby")
+        const socket = new WebSocket("ws://192.168.31.205:8002");
+        currserver = "";
 
-        const socket = new WebSocket("wss://chaochaows.loca.lt");
-        currserver = "lobby";
-
-        function addgrp(){
-            name = prompt('Group Name');
-            if(name){
+        function loadservers(servers){
+            for(let s of servers){
                 document.getElementById("groups").innerHTML += (`
-                    <div class="group" onclick="ingrp('${name}')">
-                        #${name}
+                    <div class="group" onclick="inserver('${s}')">
+                        #${s}
                     </div>
                 `);
-                localStorage.setItem("ccgroups", localStorage.getItem("ccgroups")+","+name);
             }
         }
 
-        function ingrp(gname){
-            document.getElementById("messageslist").innerHTML = "";
-            document.getElementById("textinput").placeholder = `#${gname}`;
-            currserver = gname;
+        function loadmembers(members){
+            document.getElementById("members").innerHTML = ""
+            for(let m of members){
+                document.getElementById("members").innerHTML += ("<br>" + m);
+            }
         }
 
-        function sndmsg(){
-            author = sessionStorage.getItem('ccusername');
+        async function newserver(server){
+            await socket.send(JSON.stringify({
+                "type" : 3,
+                "server" : server,
+                "uname" : sessionStorage.getItem('ccuname'),
+                "new?" : true
+            }))
+        }
+
+        async function joinserver() {
+            await socket.send(JSON.stringify({
+                "type" : 3,
+                "server" : document.getElementById("serverjointext").value,
+                "uname" : sessionStorage.getItem('ccuname'),
+                "new?" : false
+            }))
+        }
+
+        async function inserver(server){
+            document.getElementById("textinput").placeholder = `#${server}`;
+            currserver = server;
+
+            await socket.send(JSON.stringify({
+                "type" : 1,
+                "server" : server,
+                "uname" : sessionStorage.getItem('ccuname')
+            }))
+            document.getElementById("messageslist").innerHTML = ""
+        }
+
+        async function sndmsg(){
+            author = sessionStorage.getItem('ccuname');
             const now = new Date();
-            time = now.toLocaleTimeString([], {
+            time = now.toLocaleDateString('en-CA') + " " + now.toLocaleTimeString([], {
                 hour12: false,
                 hour: '2-digit',
                 minute: '2-digit'
             });
             content = document.getElementById("textinput").value
-            socket.send(`${author} ${currserver} ${time} ${encodeURIComponent(content)}`)
+            await socket.send(JSON.stringify({
+                "type" : 0,
+                "uname" : author,
+                "server" : currserver,
+                "time" : time,
+                "content" : content
+            }))
+
+            console.log({
+                "type" : 0,
+                "uname" : author,
+                "server" : currserver,
+                "time" : time,
+                "content" : content
+            })
+            //socket.send(`${author} ${currserver} ${time} ${encodeURIComponent(content)}`)
 
             document.getElementById("textinput").value = ""
         }
 
         function recmsg(author, time, content){
-            document.getElementById("messageslist").innerHTML +=
+            document.getElementById("messageslist").innerHTML =
             `<div class="message">
             <div><i>${author}</i> ${time}</div>
             <div class="messagecontent">${content}</div>
-            </div>`
+            </div>` + document.getElementById("messageslist").innerHTML
         }
-
-        localStorage.getItem('ccgroups').split(",").forEach(grp => {
-            document.getElementById("groups").innerHTML += (`
-                <div class="group" onclick="ingrp('${grp}')">
-                    #${grp}
-                </div>
-            `);
-        });
 
         document.addEventListener("keypress", function(event){
             if(event.key === "Enter" || event.keyCode === 13){
@@ -177,10 +237,31 @@
         })
 
         socket.addEventListener('message', (event) => {
-            msg = event.data.split(" ");
-            console.log(msg)
-            if(currserver==msg[1]){ recmsg(msg[0], msg[2], decodeURIComponent(msg[3]))};
+            msg = JSON.parse(event.data);
+            console.log(msg);
+            if(msg.type == 0 && msg.server == currserver) recmsg(msg.uname, msg.time, msg.content);
+            if(msg.type == 1) loadmembers(msg.members);
+            if(msg.type == 4) loadservers(msg.servers);
         })
+
+        window.addEventListener("beforeunload", (event) => {
+            socket.send(JSON.stringify({
+                "type" : 5,
+                "uname" : sessionStorage.getItem('ccuname')
+            }))
+        })
+
+
+        sessionStorage.setItem('ccuname', window.prompt("Username"))
+
+        socket.onopen = async function(){
+            await socket.send(JSON.stringify({
+                "type" : 4,
+                "uname" : sessionStorage.getItem('ccuname'),
+                "pass" : window.prompt("Password")
+            }))
+        }
+        
     </script>
 </body>
 </html>

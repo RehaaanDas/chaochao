@@ -6,14 +6,32 @@
     <title>Chaochao | Login</title>
 </head>
 <body>
-    <input type="text" id="username" placeholder="Username"><hr>
+    <input type="text" id="username" placeholder="Username">
+    <input type="password" id="password" placeholder="Password"><hr>
     <button onclick="login()">Login</button>
 
     <script>
-        function login(){
-            sessionStorage.setItem("ccusername", document.getElementById("username").value);
-            window.location.replace("/index.html")
+        const socket = new WebSocket("ws://192.168.31.205:8002")
+
+        let uname;
+        let pass;
+
+        async function login(){
+            uname = document.getElementById("username").value;
+            pass = document.getElementById("password").value;
+            await socket.send(JSON.stringify({
+                "type" : 4,
+                "uname" : uname,
+                "pass" : pass
+            }))
         }
+
+        socket.addEventListener("message", (event) => {
+            if(event.data == "success"){
+                sessionStorage.setItem("ccuname", uname);
+                window.location.replace("/index.html")
+            };
+        })
     </script>
 </body>
 </html>

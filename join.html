@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaochao | Join Server</title>
+</head>
+<body>
+    now joining...
+    <script>
+        const socket = new WebSocket("ws://192.168.31.205:8002");
+        const params = new URLSearchParams(window.location.search);
+
+        await socket.send(JSON.stringify({
+            "type" : 3,
+            "server" : params.get("s"),
+            "uname" : sessionStorage.getItem("ccuname")
+        }))
+
+        socket.addEventListener("message", (event) => {
+            if(event.data == "success") window.location.replace("/index.html");
+        })
+        
+    </script>
+</body>
+</html>
