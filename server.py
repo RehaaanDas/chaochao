@@ -68,8 +68,11 @@ async def handler(websocket):
                         loggedin = True
             con.commit()
     finally:
-        del users[uname]
-        print(f"{uname} logging off")
+        if uname and uname in users:
+            del users[uname]
+            print(f"{uname} logging off")
+        else:
+            print(f"Connection from {websocket.remote_address} closed before login")
         
 async def main():
     async with websockets.serve(handler, "0.0.0.0", 8002):
