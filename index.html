@@ -252,9 +252,8 @@
             }))
         })
 
-
-        sessionStorage.setItem('ccuname', window.prompt("Username"))
         socket.onopen = async (event) => {
+            sessionStorage.setItem('ccuname', window.prompt("Username"))
             await socket.send(JSON.stringify({
                 "type" : 4,
                 "uname" : sessionStorage.getItem('ccuname'),
