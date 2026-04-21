@@ -9,7 +9,7 @@
             display: flex;
             background-color: hsl(70, 8%, 15%);
             color: hsl(54, 70%, 68%);
-            font-family: system-ui;
+            font-family: monospace;
             overflow: hidden;
             margin: 0;
             padding: 0;
@@ -81,7 +81,7 @@
             width: 65%;
             border: none;
             color: hsl(54, 70%, 68%);
-            font-family: system-ui;
+            font-family: monospace;
             font-size: 20px;
             padding: 5px;
             font-weight:bold;
@@ -95,7 +95,7 @@
             border: none;
             background-color: hsl(32, 98%, 56%);
             font-size: 20px;
-            font-family: system-ui;
+            font-family: monospace;
             font-weight: bold;
         }
         #textsend:hover{
@@ -107,24 +107,76 @@
         #bar{
             height: 3%;
         }
-        #serverjointext{
-            width: 70%;
+        #prompt{
+            position: fixed;
+            z-index: 999;
+            background-color: hsla(70, 5%, 22%, 0.74);
+
+            top: 40%;
+            left:  40%;
+            right: 40%;
+            padding: 10px;
+            box-shadow: 2px 2px black;
         }
-        #serverjoinbtn{
-            width: 30%;
+        #promptbox{
+            width: 85%;
+            background-color: hsla(71, 8%, 40%, 0.651);
+            border: 0;
+        }
+        #promptok{
+            border: none;
+            background-color: hsl(32, 98%, 56%);
+            font-family: monospace;
+            font-weight: bold;
+        }
+        #promptok:hover{
+            background-color: hsl(32, 98%, 46%)
+        }
+        #promptok:active{
+            background-color: hsl(32, 98%, 66%);
         }
         #newserver{
             width: 100%;
+            border: none;
+            background-color: hsl(70, 8%, 20%);
+            font-family: monospace;
+            font-weight: bold;
+            color: hsl(54, 70%, 68%);
+        }
+        #newserver:hover{
+            background-color: hsl(70, 8%, 10%)
+        }
+        #newserver:active{
+            background-color: hsl(70, 8%, 40%);
+        }
+        #serverjoinbtn{
+            width: 30%;
+            border: none;
+            background-color: hsl(70, 8%, 20%);
+            font-family: monospace;
+            font-weight: bold;
+            color: hsl(54, 70%, 68%);
+        }
+        #serverjoinbtn:hover{
+            background-color: hsl(70, 8%, 10%)
+        }
+        #serverjoinbtn:active{
+            background-color: hsl(70, 8%, 40%);
+        }
+        #serverjointext{
+            width: 70%;
+            border: 0;
+            background-color: hsla(71, 8%, 40%, 0.651);
         }
     </style>
 </head>
-<body>
+<body id="body">
         <div id="groups">
             <div>
                 <input type="search" placeholder="Servers" id="serverjointext"><button id="serverjoinbtn" onclick="joinserver()">Join</button>
             </div>
             
-            <button id="newserver" onclick="newserver(window.prompt('Server Name'))">
+            <button id="newserver" onclick="newserver(await prompt('Server Name', 'name'))">
                 + Create Server
             </button>
             <hr>
@@ -140,10 +192,26 @@
         <div id="members">
         </div>
     <script>
-
-        const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
-        const socket = new WebSocket(`${wsProtocol}//${location.hostname}:8002`);
+        const socket = new WebSocket(`wss://chaochaows.loca.lt`);
         currserver = "";
+
+        function waitPromptSubmit(){
+            return new Promise((resolve) => {
+                document.getElementById("promptok").addEventListener("click", resolve, {once: true})
+            })
+        }
+        async function prompt(text, placeholder){
+            document.getElementById("body").innerHTML += `
+                <div id="prompt">
+                ${text}<br>
+                <input type="text" placeholder="${placeholder}" id="promptbox">
+                <button id="promptok">Okai</button>
+                </div>`
+            await waitPromptSubmit();
+            let value = document.getElementById("promptbox").value;
+            document.getElementById("prompt").remove();
+            return value
+        }
 
         function loadservers(servers){
             for(let s of servers){
@@ -253,11 +321,11 @@
         })
 
         socket.onopen = async (event) => {
-            sessionStorage.setItem('ccuname', window.prompt("Username"))
+            sessionStorage.setItem('ccuname', await prompt("Username", 'username'))
             await socket.send(JSON.stringify({
                 "type" : 4,
                 "uname" : sessionStorage.getItem('ccuname'),
-                "pass" : window.prompt("Password")
+                "pass" : await prompt("Password", 'password')
             }))
         }
         
